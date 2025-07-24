@@ -5,6 +5,7 @@ import { fetchPlayerRatings } from "../hooks/usePlayerRatings";
 import { PlayerChart } from "@/components/PlayerChart";
 import { FideCompareBlock } from "@/components/FideCompareBlock";
 import { FidePlayerSearch } from "@/components/FidePlayerSearch";
+import { CopyLinkButton } from "@/components/Share";
 import { Bar } from "react-chartjs-2";
 import { Chart, BarElement, ArcElement, Tooltip, Legend } from "chart.js";
 
@@ -42,11 +43,48 @@ export default function Home() {
   const [chartType, setChartType] = useState<RatingType>("rating");
   const [ratingsData, setRatingsData] = useState<{ name: string; data: PlayerRatingData }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Set default player and fetch ratings immediately on mount
+  // Read player IDs from URL and fetch player data on mount
   useEffect(() => {
-    setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet" }]);
+    const loadPlayersFromUrl = async () => {
+      // Get player IDs from URL query parameters
+      const params = new URLSearchParams(window.location.search);
+      const playerIds = params.get('id')?.split(',').filter(Boolean) || [];
+      
+      if (playerIds.length > 0) {
+        setLoading(true);
+        // Fetch player data for each ID
+        const players = await Promise.all(
+          playerIds.map(async (id) => {
+            // Fetch one rating to get the player name
+            const data = await fetchPlayerRatings(id);
+            const name = data.length > 0 ? data[0].name : id;
+            return { id, name };
+          })
+        );
+        setCompareList(players);
+      } else {
+        // Set default player if no IDs in URL
+        setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet" }]);
+      }
+      setInitialLoadComplete(true);
+    };
+    
+    loadPlayersFromUrl();
   }, []);
+
+  // Update URL when compareList changes
+  useEffect(() => {
+    if (!initialLoadComplete) return;
+    
+    // Create URL with player IDs
+    const playerIds = compareList.map(player => player.id).join(',');
+    const url = playerIds ? `?id=${playerIds}` : window.location.pathname;
+    
+    // Update browser URL without reloading the page
+    window.history.replaceState({}, '', url);
+  }, [compareList, initialLoadComplete]);
 
   useEffect(() => {
     let isMounted = true;
@@ -151,19 +189,24 @@ export default function Home() {
           </div>
         </section>
         <section className="bg-white rounded-xl shadow-md p-2">
-          <div className="flex flex-wrap gap-2 mb-2">
-            {compareList.map((p) => (
-              <span key={p.id} className="flex items-center bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm font-medium shadow-sm">
-                {p.name} <span className="ml-1 text-gray-500">({p.id})</span>
-                <button
-                  className="ml-2 text-indigo-500 hover:text-red-500 focus:outline-none"
-                  aria-label={`Remove ${p.name}`}
-                  onClick={() => setCompareList(compareList.filter(player => player.id !== p.id))}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </span>
-            ))}
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+            <div className="flex flex-wrap gap-2">
+              {compareList.map((p) => (
+                <span key={p.id} className="flex items-center bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm font-medium shadow-sm">
+                  {p.name} <span className="ml-1 text-gray-500">({p.id})</span>
+                  <button
+                    className="ml-2 text-indigo-500 hover:text-red-500 focus:outline-none"
+                    aria-label={`Remove ${p.name}`}
+                    onClick={() => setCompareList(compareList.filter(player => player.id !== p.id))}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </span>
+              ))}
+            </div>
+            {compareList.length > 0 && (
+              <CopyLinkButton />
+            )}
           </div>
           <div className="min-h-[400px] bg-slate-50 border border-slate-200 rounded-lg p-2 w-full">
             {loading ? (
