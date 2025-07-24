@@ -1,103 +1,148 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { fetchPlayerRatings } from "../hooks/usePlayerRatings";
+import { PlayerChart } from "@/components/PlayerChart";
+import { FideCompareBlock } from "@/components/FideCompareBlock";
+import { FidePlayerSearch } from "@/components/FidePlayerSearch";
+
+type Player = {
+  id: string;
+  name: string;
+};
+
+type RatingType = "rating" | "rapid_rtng" | "blitz_rtng";
+
+
+function PlayerChartWrapper({ ratingsData, chartType }: { ratingsData: { name: string; data: any[] }[]; chartType: RatingType }) {
+  return <PlayerChart players={ratingsData} chartType={chartType} />;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [compareList, setCompareList] = useState<Player[]>([]);
+  const [chartType, setChartType] = useState<RatingType>("rating");
+  const [ratingsData, setRatingsData] = useState<{ name: string; data: any[] }[]>([]);
+  const [loading, setLoading] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  // Set default player and fetch ratings immediately on mount
+  useEffect(() => {
+    setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet" }]);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchRatings() {
+      setLoading(true);
+      if (compareList.length === 0) {
+        setRatingsData([]);
+        setLoading(false);
+        return;
+      }
+      const results = await Promise.all(
+        compareList.map(async (player) => {
+          const data = await fetchPlayerRatings(player.id);
+          return { name: player.name, data };
+        })
+      );
+      if (isMounted) setRatingsData(results);
+      setLoading(false);
+    }
+    fetchRatings();
+    return () => { isMounted = false; };
+  }, [compareList]);
+
+  const handleSelectPlayer = (player: any) => {
+    if (player && !compareList.some((p) => p.id === player.fideId)) {
+      setCompareList([...compareList, { id: player.fideId, name: player.name }]);
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-gradient-to-br from-indigo-100 to-slate-50 text-gray-900 font-sans">
+      <main className="w-full py-3 px-2">
+        <h1 className="text-3xl font-bold mb-3 text-center tracking-tight">FIDE Rating Progess</h1>
+        <section className="mb-4 bg-white rounded-xl shadow-md p-4">
+          <div className="flex flex-row items-center gap-4 flex-wrap">
+            <div className="flex flex-col gap-1 flex-1 min-w-[220px]">
+              <FidePlayerSearch
+                onSelect={handleSelectPlayer}
+                inputClassName="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                dropdownClassName="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg text-gray-900"
+                itemClassName="px-3 py-2 cursor-pointer hover:bg-indigo-100"
+              />
+            </div>
+            <fieldset className="flex flex-row gap-2 items-center flex-wrap">
+              {[
+                { value: "rating", label: "Standard" },
+                { value: "rapid_rtng", label: "Rapid" },
+                { value: "blitz_rtng", label: "Blitz" },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer bg-slate-100 hover:bg-indigo-100">
+                  <input
+                    type="radio"
+                    name="chartType"
+                    value={opt.value}
+                    checked={chartType === opt.value}
+                    onChange={() => setChartType(opt.value as RatingType)}
+                    className="accent-indigo-500"
+                  />
+                  <span className="text-sm">{opt.label}</span>
+                </label>
+              ))}
+            </fieldset>
+          </div>
+        </section>
+        <section className="bg-white rounded-xl shadow-md p-2">
+          <div className="flex flex-wrap gap-2 mb-2">
+            {compareList.map((p) => (
+              <span key={p.id} className="flex items-center bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm font-medium shadow-sm">
+                {p.name} <span className="ml-1 text-gray-500">({p.id})</span>
+                <button
+                  className="ml-2 text-indigo-500 hover:text-red-500 focus:outline-none"
+                  aria-label={`Remove ${p.name}`}
+                  onClick={() => setCompareList(compareList.filter(player => player.id !== p.id))}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="min-h-[400px] bg-slate-50 border border-slate-200 rounded-lg p-2 w-full">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center w-full h-full">
+                <svg className="animate-spin h-8 w-8 text-indigo-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                <span className="text-indigo-500 text-lg">Loading player ratings...</span>
+              </div>
+            ) : compareList.length > 0 ? (
+              <>
+                <div className="w-full">
+                  <PlayerChartWrapper ratingsData={ratingsData} chartType={chartType} />
+                </div>
+                <div className="w-full mt-6 flex flex-row flex-wrap">
+                  {compareList.length > 1 && compareList.map((p1, i) => (
+                    compareList.slice(i + 1).map((p2) => (
+                      <FideCompareBlock
+                        ratingType={chartType}
+                        key={p1.id + '-' + p2.id}
+                        id1={p1.id}
+                        id2={p2.id}
+                        name1={p1.name}
+                        name2={p2.name}
+                      />
+
+                    ))
+                  ))}
+                </div>
+              </>
+            ) : (
+              <span className="text-gray-400">Add players to compare their progress.</span>
+            )}
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
