@@ -5,6 +5,10 @@ import { fetchPlayerRatings } from "../hooks/usePlayerRatings";
 import { PlayerChart } from "@/components/PlayerChart";
 import { FideCompareBlock } from "@/components/FideCompareBlock";
 import { FidePlayerSearch } from "@/components/FidePlayerSearch";
+import { Bar } from "react-chartjs-2";
+import { Chart, BarElement, ArcElement, Tooltip, Legend } from "chart.js";
+
+Chart.register(BarElement, ArcElement, Tooltip, Legend);
 
 type Player = {
   id: string;
@@ -13,15 +17,30 @@ type Player = {
 
 type RatingType = "rating" | "rapid_rtng" | "blitz_rtng";
 
+// Player rating data type
+export type PlayerRatingRow = {
+  date_2: string;
+  id_number: string;
+  rating: number | null;
+  period_games: number | null;
+  rapid_rtng: number | null;
+  rapid_games: number | null;
+  blitz_rtng: number | null;
+  blitz_games: number | null;
+  name: string;
+  country: string;
+};
 
-function PlayerChartWrapper({ ratingsData, chartType }: { ratingsData: { name: string; data: any[] }[]; chartType: RatingType }) {
+export type PlayerRatingData = PlayerRatingRow[];
+
+function PlayerChartWrapper({ ratingsData, chartType }: { ratingsData: { name: string; data: PlayerRatingData }[]; chartType: RatingType }) {
   return <PlayerChart players={ratingsData} chartType={chartType} />;
 }
 
 export default function Home() {
   const [compareList, setCompareList] = useState<Player[]>([]);
   const [chartType, setChartType] = useState<RatingType>("rating");
-  const [ratingsData, setRatingsData] = useState<{ name: string; data: any[] }[]>([]);
+  const [ratingsData, setRatingsData] = useState<{ name: string; data: PlayerRatingData }[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Set default player and fetch ratings immediately on mount
@@ -51,11 +70,50 @@ export default function Home() {
     return () => { isMounted = false; };
   }, [compareList]);
 
-  const handleSelectPlayer = (player: any) => {
+  type FideSearchPlayer = { fideId: string; name: string };
+  const handleSelectPlayer = (player: FideSearchPlayer | null) => {
     if (player && !compareList.some((p) => p.id === player.fideId)) {
       setCompareList([...compareList, { id: player.fideId, name: player.name }]);
     }
   };
+
+  // Color palette for rating & bar chart
+  const colorPalette = [
+    "#6366f1", // indigo-500
+    "#4f46e5", // indigo-600
+    "#818cf8", // indigo-400
+    "#a5b4fc", // indigo-300
+    "#c7d2fe", // indigo-200
+    "#fbbf24", // amber-400
+    "#ef4444", // red-500
+    "#22d3ee", // cyan-400
+    "#10b981", // emerald-500
+    "#f59e42"  // orange-400
+  ];
+
+  // Helper to get period_games for each month for all players
+  function getMonthlyGamesData(ratingsData: { name: string; data: PlayerRatingData }[], ratingType: RatingType) {
+    // Collect all months present in any player's data
+    const allMonths = Array.from(new Set(ratingsData.flatMap(p => p.data.map((row: PlayerRatingRow) => row.date_2)))).sort();
+    // For each player, build a map of month -> games
+    const playerMonthGames = ratingsData.map(p => {
+      const monthMap: Record<string, number> = {};
+      p.data.forEach((row: PlayerRatingRow) => {
+        if (ratingType === "rating") monthMap[row.date_2] = row.period_games || 0;
+        if (ratingType === "rapid_rtng") monthMap[row.date_2] = row.rapid_games || 0;
+        if (ratingType === "blitz_rtng") monthMap[row.date_2] = row.blitz_games || 0;
+      });
+      return monthMap;
+    });
+    // Build datasets for each player
+    const datasets = ratingsData.map((p, i) => ({
+      label: p.name,
+      data: allMonths.map(month => playerMonthGames[i][month] || 0),
+      backgroundColor: colorPalette[i % colorPalette.length],
+      borderRadius: 6,
+    }));
+    return { labels: allMonths, datasets };
+  }
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-indigo-100 to-slate-50 text-gray-900 font-sans">
@@ -120,6 +178,22 @@ export default function Home() {
               <>
                 <div className="w-full">
                   <PlayerChartWrapper ratingsData={ratingsData} chartType={chartType} />
+                </div>
+                {/* Bar chart for period_games comparison by month */}
+                <div className="w-full mx-auto mt-6">
+                  <Bar
+                    data={getMonthlyGamesData(ratingsData, chartType)}
+                    options={{
+                      plugins: { legend: { display: true, position: 'bottom' } },
+                      scales: {
+                        x: { grid: { display: false }, title: { display: true, text: 'Month' }, ticks: { font: { size: 14 } } },
+                        y: { beginAtZero: true, grid: { display: false }, title: { display: true, text: 'Games Played' }, ticks: { font: { size: 14 } } }
+                      },
+                      responsive: true,
+                      maintainAspectRatio: false,
+                    }}
+                    height={400}
+                  />
                 </div>
                 <div className="w-full mt-6 flex flex-row flex-wrap">
                   {compareList.length > 1 && compareList.map((p1, i) => (

@@ -11,6 +11,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import annotationPlugin from "chartjs-plugin-annotation";
+import type { PlayerRatingRow } from "../hooks/usePlayerRatings";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, annotationPlugin);
 
@@ -19,7 +20,7 @@ export type ChartType = "rating" | "rapid_rtng" | "blitz_rtng";
 interface PlayerChartProps {
   players: Array<{
     name: string;
-    data: any[];
+    data: PlayerRatingRow[];
   }>;
   chartType: ChartType;
 }
@@ -32,14 +33,16 @@ export function PlayerChart({ players, chartType }: PlayerChartProps) {
     )
   ).sort();
 
-  const datasets = players.map((p) => ({
+  const colorPalette = players.map((_, i) => `hsl(${(i * 360) / players.length},70%,50%)`);
+
+  const datasets = players.map((p, i) => ({
     label: p.name,
     data: allDates.map((date) => {
-      const found = p.data.find((d) => d.date_2 === date);
+      const found = p.data.find((d: PlayerRatingRow) => d.date_2 === date);
       return found ? found[chartType] ?? null : null;
     }),
     fill: false,
-    borderColor: `hsl(${Math.random() * 360},70%,50%)`,
+    borderColor: colorPalette[i % colorPalette.length],
     tension: 0.1,
   }));
 

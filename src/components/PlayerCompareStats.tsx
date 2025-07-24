@@ -23,8 +23,14 @@ async function fetchCompareStats(id1: string, id2: string) {
   }
 }
 
+export type CompareStat = {
+  p1: { id: string; name: string };
+  p2: { id: string; name: string };
+  stat: Record<string, string | number | null> | null;
+};
+
 export function PlayerCompareStats({ compareList }: { compareList: { id: string; name: string }[] }) {
-  const [stats, setStats] = useState<any[]>([]);
+  const [stats, setStats] = useState<CompareStat[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,7 +43,7 @@ export function PlayerCompareStats({ compareList }: { compareList: { id: string;
           pairs.push([compareList[i], compareList[j]]);
         }
       }
-      const results = await Promise.all(
+      const results: CompareStat[] = await Promise.all(
         pairs.map(async ([p1, p2]) => {
           const stat = await fetchCompareStats(p1.id, p2.id);
           return { p1, p2, stat };

@@ -3,7 +3,15 @@ import { Pie } from "react-chartjs-2";
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
 Chart.register(ArcElement, Tooltip, Legend);
 
-import { useFideCompare, FideCompareParsedStats } from "@/hooks/useFideCompare";
+import { useFideCompare } from "@/hooks/useFideCompare";
+
+// Helper to safely get numbers for FideCompareBlock
+function safeNum(val: unknown): number {
+  if (val == null) return 0;
+  if (typeof val === "number") return val;
+  const num = Number(val);
+  return isNaN(num) ? 0 : num;
+}
 
 export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: string; id2: string; name1: string; name2: string; ratingType: "rating" | "rapid_rtng" | "blitz_rtng" }) {
     const { raw, loading, error } = useFideCompare(id1, id2, ratingType);
@@ -11,9 +19,6 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
     // Map ratingType to suffix
     const suffix = ratingType === "rating" ? "_std" : ratingType === "rapid_rtng" ? "_rpd" : "_blz";
     const typeLabel = ratingType === "rating" ? "Standard" : ratingType === "rapid_rtng" ? "Rapid" : "Blitz";
-
-    // Helper to safely get numbers
-    const safeNum = (val: any) => val == null || isNaN(Number(val)) ? 0 : Number(val);
 
     // Parse stats for white
     const whiteTotal = raw ? safeNum(raw[`white_total${suffix}`]) : 0;

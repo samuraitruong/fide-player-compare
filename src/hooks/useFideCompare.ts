@@ -1,9 +1,5 @@
+
 import { useEffect, useState } from "react";
-
-
-export type FideCompareRawStats = {
-  [key: string]: string;
-};
 
 export type FideCompareParsedStats = {
   total: number;
@@ -13,7 +9,7 @@ export type FideCompareParsedStats = {
 };
 
 export function useFideCompare(id1: string, id2: string, ratingType: "rating" | "rapid_rtng" | "blitz_rtng") {
-  const [raw, setRaw] = useState<FideCompareRawStats | null>(null);
+  const [raw, setRaw] = useState<Record<string, unknown> | null>(null);
   const [parsed, setParsed] = useState<FideCompareParsedStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +27,12 @@ export function useFideCompare(id1: string, id2: string, ratingType: "rating" | 
       .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch'))
       .then(json => {
         if (!isMounted) return;
-        const data = json && Array.isArray(json) ? json[0] : null;
+        const data = json && Array.isArray(json) ? json[0] as Record<string, unknown> : null;
         setRaw(data);
         // Parse stats for selected rating type
         if (data) {
           const suffix = ratingType === "rating" ? "_std" : ratingType === "rapid_rtng" ? "_rpd" : "_blz";
-          const safeNum = (val: any) => val == null || isNaN(Number(val)) ? 0 : Number(val);
+          const safeNum = (val: unknown) => val == null || isNaN(Number(val)) ? 0 : Number(val);
           const total = safeNum(data[`white_total${suffix}`]) + safeNum(data[`black_total${suffix}`]);
           const win = safeNum(data[`white_win_num${suffix}`]) + safeNum(data[`black_win_num${suffix}`]);
           const draw = safeNum(data[`white_draw_num${suffix}`]) + safeNum(data[`black_draw_num${suffix}`]);
