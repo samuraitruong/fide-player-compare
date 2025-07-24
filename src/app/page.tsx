@@ -51,7 +51,7 @@ export default function Home() {
       // Get player IDs from URL query parameters
       const params = new URLSearchParams(window.location.search);
       const playerIds = params.get('id')?.split(',').filter(Boolean) || [];
-      
+
       if (playerIds.length > 0) {
         setLoading(true);
         // Fetch player data for each ID
@@ -70,18 +70,18 @@ export default function Home() {
       }
       setInitialLoadComplete(true);
     };
-    
+
     loadPlayersFromUrl();
   }, []);
 
   // Update URL when compareList changes
   useEffect(() => {
     if (!initialLoadComplete) return;
-    
+
     // Create URL with player IDs
     const playerIds = compareList.map(player => player.id).join(',');
     const url = playerIds ? `?id=${playerIds}` : window.location.pathname;
-    
+
     // Update browser URL without reloading the page
     window.history.replaceState({}, '', url);
   }, [compareList, initialLoadComplete]);
@@ -155,7 +155,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-indigo-100 to-slate-50 text-gray-900 font-sans">
-      <main className="w-full py-3 px-2">
+      <main className="w-full py-3 px-0 md:px-2">
         <h1 className="text-3xl font-bold mb-3 text-center tracking-tight">FIDE Rating Progess</h1>
         <section className="mb-4 bg-white rounded-xl shadow-md p-4">
           <div className="flex flex-row items-center gap-4 flex-wrap">
@@ -188,7 +188,7 @@ export default function Home() {
             </fieldset>
           </div>
         </section>
-        <section className="bg-white rounded-xl shadow-md p-2">
+        <section className="bg-white rounded-xl shadow-md p-1 md:p-2">
           <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
             <div className="flex flex-wrap gap-2">
               {compareList.map((p) => (
@@ -208,7 +208,7 @@ export default function Home() {
               <CopyLinkButton />
             )}
           </div>
-          <div className="min-h-[400px] bg-slate-50 border border-slate-200 rounded-lg p-2 w-full">
+          <div className="min-h-[400px] bg-slate-50 border border-slate-200 rounded-lg p-1 md:p-2 w-full">
             {loading ? (
               <div className="flex flex-col items-center justify-center w-full h-full">
                 <svg className="animate-spin h-8 w-8 text-indigo-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

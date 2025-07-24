@@ -7,10 +7,10 @@ import { useFideCompare } from "@/hooks/useFideCompare";
 
 // Helper to safely get numbers for FideCompareBlock
 function safeNum(val: unknown): number {
-  if (val == null) return 0;
-  if (typeof val === "number") return val;
-  const num = Number(val);
-  return isNaN(num) ? 0 : num;
+    if (val == null) return 0;
+    if (typeof val === "number") return val;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
 }
 
 export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: string; id2: string; name1: string; name2: string; ratingType: "rating" | "rapid_rtng" | "blitz_rtng" }) {
@@ -57,7 +57,7 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
     const hasGames = whiteTotal + blackTotal > 0;
 
     return (
-        <div className="p-2 basis-1/3 max-w-[33%] flex-shrink-0">
+        <div className="p-2 w-full md:w-1/3 md:basis-1/3 md:max-w-[33%] flex-shrink-0">
             <div className="bg-white rounded-xl shadow p-3 flex flex-col items-center  min-w-0">
                 <div className="font-semibold text-lg mb-1">{name1} vs {name2}</div>
                 <div className="text-sm text-gray-500 mb-2">{typeLabel} games: {whiteTotal + blackTotal}</div>
@@ -76,7 +76,7 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
                         {pieDataWhite && (
                             <div className="flex flex-col items-center">
                                 <div className="text-sm font-medium text-gray-700 mb-1">As White</div>
-                                <div className="w-[120px] h-[120px] mx-auto">
+                                <div className="w-[130px] h-[130px] mx-auto">
                                     <Pie data={pieDataWhite} options={{ plugins: { legend: { display: true, position: 'bottom' as const } } }} />
                                 </div>
                             </div>
@@ -84,7 +84,7 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
                         {pieDataBlack && (
                             <div className="flex flex-col items-center">
                                 <div className="text-sm font-medium text-gray-700 mb-1">As Black</div>
-                                <div className="w-[120px] h-[120px] mx-auto">
+                                <div className="w-[130px] h-[130px] mx-auto">
                                     <Pie data={pieDataBlack} options={{ plugins: { legend: { display: true, position: 'bottom' as const } } }} />
                                 </div>
                             </div>
