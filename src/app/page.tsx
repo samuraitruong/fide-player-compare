@@ -58,19 +58,19 @@ export default function Home() {
         setLoading(true);
         // Fetch player data for each ID
         const players = await Promise.all(
-          playerIds.map(async (id, index) => {
+          playerIds.map(async (id) => {
             // Fetch one rating to get the player name
             const data = await fetchPlayerRatings(id);
             const name = data.length > 0 ? data[0].name : id;
             // Assign a consistent color for this player
-            const color = randomColor(index);
+            const color = randomColor();
             return { id, name, color };
           })
         );
         setCompareList(players);
       } else {
         // Set default player if no IDs in URL
-        setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet", color: randomColor(0) }]);
+        setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet", color: randomColor() }]);
       }
       setInitialLoadComplete(true);
     };
@@ -117,7 +117,7 @@ export default function Home() {
   const handleSelectPlayer = (player: FideSearchPlayer | null) => {
     if (player && !compareList.some((p) => p.id === player.fideId)) {
       // Assign a consistent color for this new player
-      const color = randomColor(compareList.length);
+      const color = randomColor();
       setCompareList([...compareList, { id: player.fideId, name: player.name, color }]);
     }
   };
@@ -145,7 +145,7 @@ export default function Home() {
       return {
         label: p.name,
         data: allMonths.map(month => playerMonthGames[i][month] || 0),
-        backgroundColor: playerInfo ? playerInfo.color : randomColor(i),
+        backgroundColor: playerInfo ? playerInfo.color : randomColor(),
         borderRadius: 6,
       };
     });
