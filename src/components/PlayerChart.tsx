@@ -21,6 +21,7 @@ interface PlayerChartProps {
   players: Array<{
     name: string;
     data: PlayerRatingRow[];
+    color?: string;
   }>;
   chartType: ChartType;
 }
@@ -33,7 +34,10 @@ export function PlayerChart({ players, chartType }: PlayerChartProps) {
     )
   ).sort();
 
-  const colorPalette = players.map((_, i) => `hsl(${(i * 360) / players.length},70%,50%)`);
+  // Use player's assigned color if available, otherwise generate one
+  const colorPalette = players.map((player, i) => 
+    player.color || `hsl(${(i * 360) / players.length},70%,50%)`);
+  
 
   const datasets = players.map((p, i) => ({
     label: p.name,

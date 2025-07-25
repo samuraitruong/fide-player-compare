@@ -12,6 +12,8 @@ const colorPalette = [
     "#f59e42"  // orange-400
 ];
 
+export const resultColors = ["#07a01cff", "#9cb19fff", "#e30a06ff"]; // Win, Draw, Lose colors
+
 export function randomColor(i: number): string {
-    return colorPalette[i % colorPalette.length];
+    return colorPalette[Math.floor(Math.random() * 1000) % colorPalette.length];
 }

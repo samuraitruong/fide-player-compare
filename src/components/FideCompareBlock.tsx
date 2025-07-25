@@ -1,9 +1,6 @@
 import React from "react";
-import { Pie } from "react-chartjs-2";
-import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
-Chart.register(ArcElement, Tooltip, Legend);
-
 import { useFideCompare } from "@/hooks/useFideCompare";
+import { GameResultStats } from "./GameResultStats";
 
 // Helper to safely get numbers for FideCompareBlock
 function safeNum(val: unknown): number {
@@ -32,27 +29,7 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
     const blackDraw = raw ? safeNum(raw[`black_draw_num${suffix}`]) : 0;
     const blackLose = blackTotal - blackWin - blackDraw;
 
-    const pieDataWhite = whiteTotal > 0 ? {
-        labels: ["Win", "Draw", "Lose"],
-        datasets: [
-            {
-                data: [whiteWin, whiteDraw, whiteLose],
-                backgroundColor: ["#4f46e5", "#fbbf24", "#ef4444"],
-                borderWidth: 1,
-            },
-        ],
-    } : null;
-    console.log("pieDataWhite", pieDataWhite);
-    const pieDataBlack = blackTotal > 0 ? {
-        labels: ["Win", "Draw", "Lose"],
-        datasets: [
-            {
-                data: [blackWin, blackDraw, blackLose],
-                backgroundColor: ["#6366f1", "#fde68a", "#f87171"],
-                borderWidth: 1,
-            },
-        ],
-    } : null;
+    // We'll use the GameResultStats component instead of creating pie data objects
 
     const hasGames = whiteTotal + blackTotal > 0;
 
@@ -73,22 +50,20 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
                 {error && <div className="text-red-500">{error}</div>}
                 {hasGames && (
                     <div className="flex flex-row gap-8 justify-center w-full">
-                        {pieDataWhite && (
-                            <div className="flex flex-col items-center">
-                                <div className="text-sm font-medium text-gray-700 mb-1">As White</div>
-                                <div className="w-[130px] h-[130px] mx-auto">
-                                    <Pie data={pieDataWhite} options={{ plugins: { legend: { display: true, position: 'bottom' as const } } }} />
-                                </div>
-                            </div>
-                        )}
-                        {pieDataBlack && (
-                            <div className="flex flex-col items-center">
-                                <div className="text-sm font-medium text-gray-700 mb-1">As Black</div>
-                                <div className="w-[130px] h-[130px] mx-auto">
-                                    <Pie data={pieDataBlack} options={{ plugins: { legend: { display: true, position: 'bottom' as const } } }} />
-                                </div>
-                            </div>
-                        )}
+                        <GameResultStats 
+                            title="As White" 
+                            win={whiteWin} 
+                            draw={whiteDraw} 
+                            lose={whiteLose} 
+                            total={whiteTotal} 
+                        />
+                        <GameResultStats 
+                            title="As Black" 
+                            win={blackWin} 
+                            draw={blackDraw} 
+                            lose={blackLose} 
+                            total={blackTotal} 
+                        />
                     </div>
                 )}
                 {!loading && !error && !hasGames && (

@@ -15,6 +15,7 @@ Chart.register(BarElement, ArcElement, Tooltip, Legend);
 type Player = {
   id: string;
   name: string;
+  color: string;
 };
 
 type RatingType = "rating" | "rapid_rtng" | "blitz_rtng";
@@ -57,17 +58,19 @@ export default function Home() {
         setLoading(true);
         // Fetch player data for each ID
         const players = await Promise.all(
-          playerIds.map(async (id) => {
+          playerIds.map(async (id, index) => {
             // Fetch one rating to get the player name
             const data = await fetchPlayerRatings(id);
             const name = data.length > 0 ? data[0].name : id;
-            return { id, name };
+            // Assign a consistent color for this player
+            const color = randomColor(index);
+            return { id, name, color };
           })
         );
         setCompareList(players);
       } else {
         // Set default player if no IDs in URL
-        setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet" }]);
+        setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet", color: randomColor(0) }]);
       }
       setInitialLoadComplete(true);
     };
@@ -99,7 +102,8 @@ export default function Home() {
       const results = await Promise.all(
         compareList.map(async (player) => {
           const data = await fetchPlayerRatings(player.id);
-          return { name: player.name, data };
+          // Pass the player's color to the ratings data
+          return { name: player.name, data, color: player.color };
         })
       );
       if (isMounted) setRatingsData(results);
@@ -112,7 +116,9 @@ export default function Home() {
   type FideSearchPlayer = { fideId: string; name: string };
   const handleSelectPlayer = (player: FideSearchPlayer | null) => {
     if (player && !compareList.some((p) => p.id === player.fideId)) {
-      setCompareList([...compareList, { id: player.fideId, name: player.name }]);
+      // Assign a consistent color for this new player
+      const color = randomColor(compareList.length);
+      setCompareList([...compareList, { id: player.fideId, name: player.name, color }]);
     }
   };
 
@@ -133,12 +139,16 @@ export default function Home() {
       return monthMap;
     });
     // Build datasets for each player
-    const datasets = ratingsData.map((p, i) => ({
-      label: p.name,
-      data: allMonths.map(month => playerMonthGames[i][month] || 0),
-      backgroundColor: randomColor(i),
-      borderRadius: 6,
-    }));
+    const datasets = ratingsData.map((p, i) => {
+      // Find the corresponding player in compareList to get the consistent color
+      const playerInfo = compareList.find(player => player.name === p.name);
+      return {
+        label: p.name,
+        data: allMonths.map(month => playerMonthGames[i][month] || 0),
+        backgroundColor: playerInfo ? playerInfo.color : randomColor(i),
+        borderRadius: 6,
+      };
+    });
     return { labels: allMonths, datasets };
   }
 
