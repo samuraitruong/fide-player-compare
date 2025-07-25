@@ -8,6 +8,7 @@ import { FidePlayerSearch } from "@/components/FidePlayerSearch";
 import { CopyLinkButton } from "@/components/Share";
 import { Bar } from "react-chartjs-2";
 import { Chart, BarElement, ArcElement, Tooltip, Legend } from "chart.js";
+import { randomColor } from "@/util";
 
 Chart.register(BarElement, ArcElement, Tooltip, Legend);
 
@@ -115,19 +116,7 @@ export default function Home() {
     }
   };
 
-  // Color palette for rating & bar chart
-  const colorPalette = [
-    "#6366f1", // indigo-500
-    "#4f46e5", // indigo-600
-    "#818cf8", // indigo-400
-    "#a5b4fc", // indigo-300
-    "#c7d2fe", // indigo-200
-    "#fbbf24", // amber-400
-    "#ef4444", // red-500
-    "#22d3ee", // cyan-400
-    "#10b981", // emerald-500
-    "#f59e42"  // orange-400
-  ];
+
 
   // Helper to get period_games for each month for all players
   function getMonthlyGamesData(ratingsData: { name: string; data: PlayerRatingData }[], ratingType: RatingType) {
@@ -147,7 +136,7 @@ export default function Home() {
     const datasets = ratingsData.map((p, i) => ({
       label: p.name,
       data: allMonths.map(month => playerMonthGames[i][month] || 0),
-      backgroundColor: colorPalette[i % colorPalette.length],
+      backgroundColor: randomColor(i),
       borderRadius: 6,
     }));
     return { labels: allMonths, datasets };

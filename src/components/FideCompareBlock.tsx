@@ -57,7 +57,7 @@ export function FideCompareBlock({ id1, id2, name1, name2, ratingType }: { id1: 
     const hasGames = whiteTotal + blackTotal > 0;
 
     return (
-        <div className="p-2 w-full md:w-1/3 md:basis-1/3 md:max-w-[33%] flex-shrink-0">
+        <div className="p-2 w-full md:w-1/2 md:basic-1/2 lg:w-1/3 lg:basis-1/3 lg:max-w-[33%] flex-shrink-0">
             <div className="bg-white rounded-xl shadow p-3 flex flex-col items-center  min-w-0">
                 <div className="font-semibold text-lg mb-1">{name1} vs {name2}</div>
                 <div className="text-sm text-gray-500 mb-2">{typeLabel} games: {whiteTotal + blackTotal}</div>
