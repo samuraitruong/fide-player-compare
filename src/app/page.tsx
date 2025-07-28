@@ -2,93 +2,26 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchPlayerRatings } from "../hooks/usePlayerRatings";
-import { PlayerChart } from "@/components/PlayerChart";
+import { PlayerChartWrapper } from "@/components/PlayerChartWrapper";
 import { FideCompareBlock } from "@/components/FideCompareBlock";
 import { FidePlayerSearch } from "@/components/FidePlayerSearch";
 import { CopyLinkButton } from "@/components/Share";
 import { Bar } from "react-chartjs-2";
 import { Chart, BarElement, ArcElement, Tooltip, Legend } from "chart.js";
-import { randomColor } from "@/util";
+import { getMonthlyGamesData } from "@/util";
+import { useUrlPlayerManagement } from "@/hooks/useUrlPlayerManagement";
+import { usePlayerManagement } from "@/hooks/usePlayerManagement";
+import { getChartOptions, CHART_HEIGHT, RATING_TYPE_OPTIONS } from "@/constants/chartConfig";
+import { RatingType, PlayerRatingData } from "@/types/player";
 
 Chart.register(BarElement, ArcElement, Tooltip, Legend);
 
-type Player = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type RatingType = "rating" | "rapid_rtng" | "blitz_rtng";
-
-// Player rating data type
-export type PlayerRatingRow = {
-  date_2: string;
-  id_number: string;
-  rating: number | null;
-  period_games: number | null;
-  rapid_rtng: number | null;
-  rapid_games: number | null;
-  blitz_rtng: number | null;
-  blitz_games: number | null;
-  name: string;
-  country: string;
-};
-
-export type PlayerRatingData = PlayerRatingRow[];
-
-function PlayerChartWrapper({ ratingsData, chartType }: { ratingsData: { name: string; data: PlayerRatingData }[]; chartType: RatingType }) {
-  return <PlayerChart players={ratingsData} chartType={chartType} />;
-}
-
 export default function Home() {
-  const [compareList, setCompareList] = useState<Player[]>([]);
+  const { compareList, setCompareList } = useUrlPlayerManagement();
+  const { handleSelectPlayer, removePlayer } = usePlayerManagement(compareList, setCompareList);
   const [chartType, setChartType] = useState<RatingType>("rating");
   const [ratingsData, setRatingsData] = useState<{ name: string; data: PlayerRatingData }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-
-  // Read player IDs from URL and fetch player data on mount
-  useEffect(() => {
-    const loadPlayersFromUrl = async () => {
-      // Get player IDs from URL query parameters
-      const params = new URLSearchParams(window.location.search);
-      const playerIds = params.get('id')?.split(',').filter(Boolean) || [];
-
-      if (playerIds.length > 0) {
-        setLoading(true);
-        // Fetch player data for each ID
-        const players = await Promise.all(
-          playerIds.map(async (id) => {
-            // Fetch one rating to get the player name
-            const data = await fetchPlayerRatings(id);
-            const name = data.length > 0 ? data[0].name : id;
-            // Assign a consistent color for this player
-            const color = randomColor();
-            return { id, name, color };
-          })
-        );
-        setCompareList(players);
-      } else {
-        // Set default player if no IDs in URL
-        setCompareList([{ id: "3267849", name: "Nguyen Anh Kiet", color: randomColor() }]);
-      }
-      setInitialLoadComplete(true);
-    };
-
-    loadPlayersFromUrl();
-  }, []);
-
-  // Update URL when compareList changes
-  useEffect(() => {
-    if (!initialLoadComplete) return;
-
-    // Create URL with player IDs
-    const playerIds = compareList.map(player => player.id).join(',');
-    const url = playerIds ? `?id=${playerIds}` : window.location.pathname;
-
-    // Update browser URL without reloading the page
-    window.history.replaceState({}, '', url);
-  }, [compareList, initialLoadComplete]);
 
   useEffect(() => {
     let isMounted = true;
@@ -113,45 +46,6 @@ export default function Home() {
     return () => { isMounted = false; };
   }, [compareList]);
 
-  type FideSearchPlayer = { fideId: string; name: string };
-  const handleSelectPlayer = (player: FideSearchPlayer | null) => {
-    if (player && !compareList.some((p) => p.id === player.fideId)) {
-      // Assign a consistent color for this new player
-      const color = randomColor();
-      setCompareList([...compareList, { id: player.fideId, name: player.name, color }]);
-    }
-  };
-
-
-
-  // Helper to get period_games for each month for all players
-  function getMonthlyGamesData(ratingsData: { name: string; data: PlayerRatingData }[], ratingType: RatingType) {
-    // Collect all months present in any player's data
-    const allMonths = Array.from(new Set(ratingsData.flatMap(p => p.data.map((row: PlayerRatingRow) => row.date_2)))).sort();
-    // For each player, build a map of month -> games
-    const playerMonthGames = ratingsData.map(p => {
-      const monthMap: Record<string, number> = {};
-      p.data.forEach((row: PlayerRatingRow) => {
-        if (ratingType === "rating") monthMap[row.date_2] = row.period_games || 0;
-        if (ratingType === "rapid_rtng") monthMap[row.date_2] = row.rapid_games || 0;
-        if (ratingType === "blitz_rtng") monthMap[row.date_2] = row.blitz_games || 0;
-      });
-      return monthMap;
-    });
-    // Build datasets for each player
-    const datasets = ratingsData.map((p, i) => {
-      // Find the corresponding player in compareList to get the consistent color
-      const playerInfo = compareList.find(player => player.name === p.name);
-      return {
-        label: p.name,
-        data: allMonths.map(month => playerMonthGames[i][month] || 0),
-        backgroundColor: playerInfo ? playerInfo.color : randomColor(),
-        borderRadius: 6,
-      };
-    });
-    return { labels: allMonths, datasets };
-  }
-
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-indigo-100 to-slate-50 text-gray-900 font-sans">
       <main className="w-full py-3 px-0 md:px-2">
@@ -167,11 +61,7 @@ export default function Home() {
               />
             </div>
             <fieldset className="flex flex-row gap-2 items-center flex-wrap">
-              {[
-                { value: "rating", label: "Standard" },
-                { value: "rapid_rtng", label: "Rapid" },
-                { value: "blitz_rtng", label: "Blitz" },
-              ].map(opt => (
+              {RATING_TYPE_OPTIONS.map(opt => (
                 <label key={opt.value} className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer bg-slate-100 hover:bg-indigo-100">
                   <input
                     type="radio"
@@ -196,7 +86,7 @@ export default function Home() {
                   <button
                     className="ml-2 text-indigo-500 hover:text-red-500 focus:outline-none"
                     aria-label={`Remove ${p.name}`}
-                    onClick={() => setCompareList(compareList.filter(player => player.id !== p.id))}
+                    onClick={() => removePlayer(p.id)}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
@@ -223,19 +113,16 @@ export default function Home() {
                 </div>
                 {/* Bar chart for period_games comparison by month */}
                 <div className="w-full mx-auto mt-6">
-                  <Bar
-                    data={getMonthlyGamesData(ratingsData, chartType)}
-                    options={{
-                      plugins: { legend: { display: true, position: 'bottom' } },
-                      scales: {
-                        x: { grid: { display: false }, title: { display: true, text: 'Month' }, ticks: { font: { size: 14 } } },
-                        y: { beginAtZero: true, grid: { display: false }, title: { display: true, text: 'Games Played' }, ticks: { font: { size: 14 } } }
-                      },
-                      responsive: true,
-                      maintainAspectRatio: false,
-                    }}
-                    height={400}
-                  />
+                  {(() => {
+                    const chartData = getMonthlyGamesData(ratingsData, chartType, compareList);
+                    return (
+                      <Bar
+                        data={chartData}
+                        options={getChartOptions(chartData.labels.length)}
+                        height={CHART_HEIGHT}
+                      />
+                    );
+                  })()}
                 </div>
                 <div className="w-full mt-6 flex flex-row flex-wrap">
                   {compareList.length > 1 && compareList.map((p1, i) => (
