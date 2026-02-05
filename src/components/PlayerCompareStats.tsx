@@ -6,6 +6,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { fetchWithRetry } from "@/util";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -14,7 +15,12 @@ async function fetchCompareStats(id1: string, id2: string) {
   const url = `https://ratings.fide.com/a_data_stats.php?id1=${id1}&id2=${id2}`;
   const proxyUrl = `https://no-cors.fly.dev/cors/${url}`;
   try {
-    const res = await fetch(proxyUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const res = await fetchWithRetry(proxyUrl, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    }, {
+      retries: 4,
+      timeoutMs: 15_000,
+    });
     if (!res.ok) return null;
     const json = await res.json();
     return json && Array.isArray(json) ? json[0] : null;

@@ -20,9 +20,6 @@ export function FidePlayerSearch({ onSelect, inputClassName = '', dropdownClassN
   useEffect(() => {
     if (debouncedInput) {
       search(debouncedInput);
-      setShowDropdown(true);
-    } else {
-      setShowDropdown(false);
     }
   }, [debouncedInput, search]);
 
@@ -38,9 +35,15 @@ export function FidePlayerSearch({ onSelect, inputClassName = '', dropdownClassN
         type="text"
         value={input}
         placeholder="Search FIDE player..."
-        onChange={e => setInput(e.target.value)}
+        onChange={e => {
+          const nextValue = e.target.value;
+          setInput(nextValue);
+          setShowDropdown(Boolean(nextValue));
+        }}
         className={inputClassName}
-        onFocus={() => { if (debouncedInput) setShowDropdown(true); }}
+        onFocus={() => {
+          if (input) setShowDropdown(true);
+        }}
       />
       {loading && <div className="mt-2 text-sm text-gray-500">Searching...</div>}
       {error && <div className="mt-2 text-sm text-red-500">{error}</div>}

@@ -66,3 +66,98 @@ export function getMonthlyGamesData(
   });
   return { labels: allMonths, datasets };
 }
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(retryAfter: string | null): number | null {
+  if (!retryAfter) return null;
+  const seconds = Number(retryAfter);
+  if (!Number.isNaN(seconds) && Number.isFinite(seconds)) {
+    return Math.max(0, Math.round(seconds * 1000));
+  }
+  const dateMs = Date.parse(retryAfter);
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now());
+  }
+  return null;
+}
+
+export type FetchWithRetryOptions = {
+  retries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  timeoutMs?: number;
+  retryOnStatuses?: number[];
+  signal?: AbortSignal;
+};
+
+export async function fetchWithRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  options?: FetchWithRetryOptions
+): Promise<Response> {
+  const {
+    retries = 3,
+    baseDelayMs = 350,
+    maxDelayMs = 5000,
+    timeoutMs,
+    retryOnStatuses = [408, 425, 429, 500, 502, 503, 504],
+    signal,
+  } = options ?? {};
+
+  let attempt = 0;
+  while (true) {
+    attempt += 1;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const controller = timeoutMs ? new AbortController() : null;
+
+    const onAbort = () => {
+      controller?.abort();
+    };
+
+    try {
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+
+      if (timeoutMs && controller) {
+        timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      }
+
+      if (signal && controller) {
+        signal.addEventListener("abort", onAbort, { once: true });
+      }
+
+      const response = await fetch(input, {
+        ...init,
+        signal: controller?.signal ?? signal ?? init?.signal,
+      });
+
+      if (!retryOnStatuses.includes(response.status) || attempt > retries + 1) {
+        return response;
+      }
+
+      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+      const exponential = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt - 1));
+      const jitter = Math.random() * Math.min(250, exponential * 0.2);
+      const delay = Math.min(maxDelayMs, (retryAfterMs ?? exponential) + jitter);
+      await sleep(delay);
+    } catch (err) {
+      const isAbort = err instanceof DOMException && err.name === "AbortError";
+      if (isAbort || attempt > retries + 1) {
+        throw err;
+      }
+      const exponential = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt - 1));
+      const jitter = Math.random() * Math.min(250, exponential * 0.2);
+      const delay = Math.min(maxDelayMs, exponential + jitter);
+      await sleep(delay);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (signal && controller) {
+        signal.removeEventListener("abort", onAbort);
+      }
+    }
+  }
+}

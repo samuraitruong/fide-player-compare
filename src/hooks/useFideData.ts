@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { fetchWithRetry } from "@/util";
 
 export interface FidePlayer {
     fideId: string;
@@ -34,7 +35,12 @@ export function useFideData(initialKeyword: string): {
         latestKeyword.current = kw;
         try {
             const url = `https://ratings.fide.com/incl_search_l.php?search=${kw}&simple=1`;
-            const response = await fetch('https://no-cors.fly.dev/cors/' + url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const response = await fetchWithRetry('https://no-cors.fly.dev/cors/' + url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }, {
+                retries: 3,
+                timeoutMs: 15_000,
+            });
             if (!response.ok) {
                 throw new Error('Failed to fetch FIDE data');
             }

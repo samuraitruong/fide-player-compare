@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { fetchWithRetry } from "@/util";
 
 export type FideCompareParsedStats = {
   total: number;
@@ -17,13 +18,21 @@ export function useFideCompare(id1: string, id2: string, ratingType: "rating" | 
   useEffect(() => {
     if (!id1 || !id2) return;
     let isMounted = true;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
     setRaw(null);
     setParsed(null);
     const url = `https://ratings.fide.com/a_data_stats.php?id1=${id1}&id2=${id2}`;
     const proxyUrl = `https://no-cors.fly.dev/cors/${url}`;
-    fetch(proxyUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    fetchWithRetry(proxyUrl, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      signal: controller.signal,
+    }, {
+      retries: 4,
+      timeoutMs: 15_000,
+      signal: controller.signal,
+    })
       .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch'))
       .then(json => {
         if (!isMounted) return;
@@ -48,7 +57,10 @@ export function useFideCompare(id1: string, id2: string, ratingType: "rating" | 
       .finally(() => {
         if (isMounted) setLoading(false);
       });
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [id1, id2, ratingType]);
 
   return { raw, parsed, loading, error };

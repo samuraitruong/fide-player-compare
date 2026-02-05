@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fetchWithRetry } from "@/util";
 
 export type PlayerRatingRow = {
     date_2: string;
@@ -20,7 +21,12 @@ export async function fetchPlayerRatings(id: string): Promise<PlayerRatingData> 
     const url = `https://ratings.fide.com/a_chart_data.phtml?event=${id}&period=0`;
     const proxyUrl = `https://no-cors.fly.dev/cors/${url}`;
     try {
-        const res = await fetch(proxyUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const res = await fetchWithRetry(proxyUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        }, {
+            retries: 4,
+            timeoutMs: 15_000,
+        });
         if (!res.ok) return [];
         const json = await res.json();
         if (Array.isArray(json) && json.length && typeof json[0] === 'object') {
@@ -64,9 +70,17 @@ export function usePlayerRatings(id: string): PlayerRatingData {
     const [data, setData] = useState<PlayerRatingData>([]);
     useEffect(() => {
         if (!id) return;
+        const controller = new AbortController();
         const url = `https://ratings.fide.com/a_chart_data.phtml?event=${id}&period=0`;
         const proxyUrl = `https://no-cors.fly.dev/cors/${url}`;
-        fetch(proxyUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        fetchWithRetry(proxyUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: controller.signal,
+        }, {
+            retries: 4,
+            timeoutMs: 15_000,
+            signal: controller.signal,
+        })
             .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch'))
             .then(json => {
                 if (Array.isArray(json) && json.length && typeof json[0] === 'object') {
@@ -103,6 +117,7 @@ export function usePlayerRatings(id: string): PlayerRatingData {
                 }
             })
             .catch(() => setData([]));
+        return () => controller.abort();
     }, [id]);
     return data;
 }
